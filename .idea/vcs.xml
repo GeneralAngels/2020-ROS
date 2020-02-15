@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$/.." vcs="Git" />
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/2019-ROS-Robot" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/csr_robotic_arm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ros_astra_camera" vcs="Git" />
+  </component>
+</project>

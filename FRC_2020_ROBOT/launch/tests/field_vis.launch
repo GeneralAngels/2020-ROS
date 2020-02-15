@@ -1,0 +1,8 @@
+<launch>
+    <param name="inner" value="none"/>
+    <param name="outer" value="none"/>
+  <node name="field_publisher_low_res" pkg="FRC_2020_ROBOT" type="field_publisher_low_res.py" output="screen" />
+  <node pkg="tf" type="static_transform_publisher" name="map2world" args="0 0 0 0 0 0 1 map world 10"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find FRC_2020_ROBOT)/rviz/ros_simulator.rviz" />
+  <node name="shooting_path_publisher" pkg="FRC_2020_ROBOT" type="shooting_path.py" output="screen" />
+</launch>

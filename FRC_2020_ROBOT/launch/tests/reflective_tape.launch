@@ -1,0 +1,9 @@
+<launch>
+    <arg name="with_communication" default="false" />
+    <node name="reflective_tape_detector" pkg="FRC_2020_ROBOT" type="reflective_tape.py" output="screen" />
+    <node name="communication" pkg="FRC_2020_ROBOT" type="communication.py" if="$(arg with_communication)" output="screen"/>
+
+<!--     <node name="rviz" pkg="rviz" type="rviz" /> -->
+<!--   args="-d $(find FRC_2020_ROBOT)/rviz/image_viewing_config.rviz"   -->
+<!--     <include file="$(find astra_camera)/launch/astrapro.launch"/> -->
+</launch>

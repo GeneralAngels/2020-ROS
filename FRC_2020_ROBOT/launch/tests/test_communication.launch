@@ -1,0 +1,5 @@
+<launch>
+  <node name="communication" pkg="FRC_2020_ROBOT" type="communication.py" output="screen" />
+  <node pkg="tf" type="static_transform_publisher" name="map2world" args="0 0 0 0 0 0 1 map world 10"/>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find FRC_2020_ROBOT)/rviz/ros_simulator.rviz" />
+</launch>

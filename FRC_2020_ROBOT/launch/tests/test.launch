@@ -1,0 +1,4 @@
+<launch>
+<node name="main_processing" pkg="FRC_2020_ROBOT" type="ball_detector_test.py" output="screen" />
+
+</launch>

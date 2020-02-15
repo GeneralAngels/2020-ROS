@@ -1,0 +1,6 @@
+<launch>
+  <arg name="with_rviz" default="true" />
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find FRC_2020_ROBOT)/rviz/ros_simulator.rviz" if="$(arg with_rviz)" />
+
+</launch>
