@@ -1,0 +1,5 @@
+<launch>
+    <arg name="with_stream" default="true" />
+    <node name="communication" pkg="FRC_2020_ROBOT" type="communication.py" output="screen"/>
+<!--     <node name="camera_stream" pkg="FRC_2020_ROBOT" type="streaming.py" if="$(arg with_stream)" /> -->
+</launch>

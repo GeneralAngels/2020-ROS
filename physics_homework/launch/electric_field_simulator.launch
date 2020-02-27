@@ -1,6 +1,0 @@
-<launch>
-    <arg name="with_rviz" default="true" />
-
-    <node name="sim" pkg="physics_homework" type="main.py" />
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find physics_homework)/rviz/sim.rviz" if="$(arg with_rviz)" />
-</launch>

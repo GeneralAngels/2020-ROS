@@ -47,13 +47,14 @@
          ]
 
    },
+   "cameras": {
    "logitech_c922":{
-      "PORT": 2,
+      "ID": "C922_Pro",
       "FPS":30.0,
       "FRAME_WIDTH":640,
       "FRAME_HEIGHT":480,
-      "EXPOSURE": 0.01,
-      "BRIGHTNESS": 3,
+      "EXPOSURE": 250,
+      "BRIGHTNESS": 128,
       "calibration_matrix":
       [[989.5689274500862, 0.0, 621.6749561947778],
       [0.0, 991.3747399169226, 349.23508137519156],
@@ -62,10 +63,14 @@
                      -0.0003533551314810411, -0.0032062507042155564,
                      -0.4639371587334679]
    },
+      "livecam": {
+         "ID": "xae_LifeCam_HD-3000-video"
+      }
+   },
    "networking":{
       "ROS_IP":"",
       "RIO_IP":"10.22.30.2",
-      "RIO_PORT":2230,
+      "RIO_PORT":5800,
       "BUFFER_SIZE":1,
       "rate": 10
    }

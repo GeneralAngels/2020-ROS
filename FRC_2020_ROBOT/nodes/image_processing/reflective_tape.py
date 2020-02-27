@@ -7,11 +7,12 @@ from std_msgs.msg import *
 
 import numpy as np
 import cv2 as cv
+from math import *
 
 from FRC_utils.math_utils import get_dis, get_center_point
 from FRC_utils.ros_utils import get_config, create_pose
 from FRC_utils.image_proccessing_utils import order_points, LogitechC922, show_images, publish_image, \
-    get_mass_dir, get_x, get_y, draw_axis
+    get_mass_dir, get_x, get_y, draw_axis, get_camera_by_name
 
 
 def target_pose_estimation(mat,
@@ -28,7 +29,6 @@ def target_pose_estimation(mat,
     sets the rosparam '/target_in_frame' if the target appears in the mat.
     publishes the pose of the target under the name '/target_pose'.
 
-    :param rotation_publisher:
     :param mat: RGB mat.
     :param model_points: The points of the target in real space ([ [x, y, z], [x, y, z], ... ]
     :param dist_coeffs: Distortion coeff matrix from camera calibration.
@@ -37,6 +37,7 @@ def target_pose_estimation(mat,
     :param is_publish_image: bool - for publishing the image.
     :param image_publisher: ROS image publisher.
     :param target_pose_publisher: ROS Target pose publisher ([x, y, z, roll, pitch, yaw])
+    :param rotation_publisher: Float32 publisher for the turret rotation.
     :return: None
     """
     if mat is None:
@@ -47,6 +48,9 @@ def target_pose_estimation(mat,
     ROI = None
     target_pose = None
     rotation = 0.0
+
+    # rotate mat 180 degrees
+    mat = cv.rotate(mat, cv.ROTATE_180)
 
     # transforms the image to HSV and grayscale
     hsv = cv.cvtColor(mat, cv.COLOR_RGB2HSV)
@@ -61,8 +65,8 @@ def target_pose_estimation(mat,
     # filters out the unwanted colors.
     lower_thresh = np.array([0, 0, 0])
     upper_thresh = np.array([255, 255, 112])
-    mask = cv.bitwise_not(cv.inRange(hsv, lower_thresh, upper_thresh))
-    # mask = cv.inRange(hsv, (36, 25, 80), (100, 255, 255))
+    # mask = cv.bitwise_not(cv.inRange(hsv, lower_thresh, upper_thresh))  # TODO: Calibrate mask thresholds
+    mask = cv.inRange(hsv, (36, 25, 40), (100, 255, 255))
 
     # threshold and contours
     ret, thresh = cv.threshold(mask, 20, 255, 0)
@@ -83,7 +87,7 @@ def target_pose_estimation(mat,
 
             test, temp, key_points = find_key_points_2(ROI, offsets)
             if not test:
-                break
+                continue
 
             center_point_2d = get_center_point(key_points[0], key_points[-1])
             for p in key_points:
@@ -95,17 +99,14 @@ def target_pose_estimation(mat,
                                                                          dist_coeffs)
 
             if success:
-                drawn, center_point_3d = draw_axis(mat, rotation_vector, translation_vector, camera_matrix,
-                                                   dist_coeffs)
+                drawn, center_point_3d = draw_axis(mat, rotation_vector, translation_vector, camera_matrix, dist_coeffs)
                 dis = get_dis(center_point_2d, center_point_3d)
-                rotation = ((center_point_2d[0] / width) - 0.5) * 3.0
+                euler = rotation_to_euler(rotation_vector)
+                rotation = ((center_point_2d[0] / width) - 0.5) * (-1.2)
 
                 if success and (dis < 6):
                     mat = drawn
-                target_pose = [i[0] for i in rotation_vector] + [j[0] for j in translation_vector]
-                # print "found match!"
-                # print "Rotation Vector:\n {0}".format(rotation_vector)
-                # print "Translation Vector:\n {0}".format(translation_vector)
+                target_pose = [i[0] for i in rotation_vector] + euler
                 break
 
     if is_view_image:
@@ -115,9 +116,19 @@ def target_pose_estimation(mat,
         publish_image(mat, image_publisher)
         rospy.set_param('target_in_frame', success)
         rotation_publisher.publish(float(rotation))
+
         if success:
             pose = create_pose(target_pose, '/target_pose')
             target_pose_publisher.publish(pose)
+
+
+def rotation_to_euler(rotation_vector):
+    R = cv.Rodrigues(rotation_vector)[0]
+    roll = 180 * atan2(-R[2][1], R[2][2]) / pi
+    pitch = 180 * asin(R[2][0]) / pi
+    yaw = 180 * atan2(-R[1][0], R[0][0]) / pi
+    rot_params = [radians(roll), radians(pitch), radians(yaw)]
+    return rot_params
 
 
 def check_location(point, cnt):
@@ -151,9 +162,10 @@ def find_key_points_2(gray, offsets):
     gray = cv.GaussianBlur(gray, (3, 3), 0)
 
     gray = gray.astype('uint8') * 255
-    corners = cv.goodFeaturesToTrack(gray, 4, 0.0001, 50, blockSize=15)
+    corners = cv.goodFeaturesToTrack(gray, 4, 0.000001, 30, blockSize=15)
     corners = np.int0(corners)
 
+    # noinspection PyTypeChecker
     res = [[int(p[0][0] + offsets[0]), int(p[0][1] + offsets[1])] for p in corners]
     temp = sorted(res, key=get_y)[-2:]
     extremes = [tuple(min(res, key=get_x)), tuple(max(res, key=get_x)), tuple(max(temp, key=get_x)),
@@ -193,31 +205,31 @@ def find_key_points(gray, offsets):
 
 
 def main():
+    # node setup
     config = get_config()
     rospy.init_node('reflective_tape_detector')
     np.set_printoptions(suppress=True)
     rate = rospy.Rate(20)
+
+    # ROS Subscribers, publishers and params setup
     rospy.set_param('target_in_frame', False)
     image_pub = rospy.Publisher('/camera/ir/processed', Image, queue_size=30)
     target_pose_publisher = rospy.Publisher('/target/position', PoseStamped, queue_size=5)
     rotation_publisher = rospy.Publisher('/target/rotation', Float32, queue_size=5)
 
-    # if using astra:
-    # images = AstraCallback()
-
-    # if using logitech c922
-    camera_config = config['logitech_c922']
+    # camera configuration
+    camera_config = config['cameras']['logitech_c922']
     camera = LogitechC922(camera_config)
-
     calibration_mat = np.array(camera_config['calibration_matrix'])
     distortion = np.array(camera_config['dist_coeff'])
     port_points = np.array([tuple(i) for i in config['field']['outer_port_outline']])  # The real location of the port
 
+    # processing
     while not rospy.is_shutdown():
         target_pose_estimation(camera.mat, port_points,
                                dist_coeffs=distortion,
                                camera_matrix=calibration_mat,
-                               is_view_image=True,
+                               is_view_image=False,
                                is_publish_image=True,
                                image_publisher=image_pub,
                                target_pose_publisher=target_pose_publisher,
